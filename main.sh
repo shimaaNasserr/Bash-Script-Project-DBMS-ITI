@@ -32,63 +32,16 @@ while true; do
                     #--------
                     while true; do
                     echo "===== Tables Menu for '$dbname' ====="
-                    select table_action in "Create Table" "List Tables" "Drop Table" "Back to Main Menu"
+                    select table_action in "Create Table" "List Tables" "Insert into Table" "Select From Table" "Drop Table" "Back to Main Menu"
                     do
                     case $table_action in
-                    #----------
-                    "Create Table")
-                     echo "Enter Table Name:"
-                     read tablename
-                    table_file="$DB_DIR/$dbname/$tablename"
-                    meta_file="$table_file.meta"
-
-                    if [ -f "$table_file" ]; then
-                      echo "Table already exists."
-                    else
-                     echo "How many columns?"
-                      read col_count
-
-                      columns=() # array store column names
-                      datatypes=() # array store column datatypes
-                      pk_set=false 
-
-                    for (( i=1; i<=col_count; i++ ))
-                    do
-                    echo "Enter name of column $i:"
-                    read col_name
-
-                    echo "Enter datatype of $col_name (string/number):"
-                    read col_type
-
-                    # check if datatype is valid or not
-                    while [[ "$col_type" != "string" && "$col_type" != "number" ]]; do
-                     echo "Invalid datatype. Enter string or number:"
-                     read col_type
-                    done
-
-                    echo "Is this column the Primary Key? (yes/no):"
-                    read is_pk
-
-                   if [[ "$is_pk" == "yes" && "$pk_set" == false ]]; then
-                      columns+=("$col_name:$col_type:pk")
-                      pk_set=true
-                   else
-                   columns+=("$col_name:$col_type")
-                   fi
-                   done
-
-                    # Create file for data to insert into it 
-                    touch "$table_file"
-
-                    # Write meta file 
-                    for col in "${columns[@]}"; do
-                        echo "$col" >> "$meta_file"
-                    done
-
-                        echo "Table '$tablename' created with metadata."
-                    fi
-                    break
-                    ;;
+                        "Create Table")
+                        echo "Enter table name:"
+                        read tablename
+                        touch "$DB_DIR/$dbname/$tablename"
+                        echo "Table '$tablename' created."
+                        break
+                        ;;
                         "List Tables")
                         echo "Tables in '$dbname':"
                         ls "$DB_DIR/$dbname"
@@ -99,6 +52,55 @@ while true; do
                         read tablename
                         rm "$DB_DIR/$dbname/$tablename"
                         echo "Table '$tablename' deleted."
+                        break
+                        ;;
+                        "Insert into Table")
+                        echo "Enter table name:"
+                        read tablename
+                        table_path="$DB_DIR/$dbname/$tablename"
+                        
+                        if [ -f "$table_path" ]; then
+                            echo "Enter data (format: name=value:type)"
+                            echo "Types: str, int, or float"
+                            read -p "Example: age=25:int " new_data
+                            
+                            if [[ "$new_data" == *":str"* || "$new_data" == *":int"* || "$new_data" == *":float"* ]]; then
+                                echo "$new_data" >> "$table_path"
+                                echo "Data inserted!"
+                            else
+                                echo "Error: Missing or invalid type (:str/:int/:float)"
+                            fi
+                        else
+                            echo "Table doesn't exist"
+                        fi
+                        break
+                        ;;
+                        "Select From Table")
+                        echo "Enter table name to view:"
+                        read tablename
+                        table_path="$DB_DIR/$dbname/$tablename"
+                        
+                        if [ -f "$table_path" ]; then
+                            echo -e "\nContents of '$tablename':"
+                            echo "==========="
+                            cat "$table_path"
+                            echo "==========="
+                            
+                            echo "Enter search term (or leave blank to skip):"
+                            read search_term
+                            if [ -n "$search_term" ]; then
+                                echo -e "\nSearch results:"
+                                echo "============="
+                                if grep -q "$search_term" "$table_path"; then
+                                    grep "$search_term" "$table_path"
+                                else
+                                    echo "No matches found for '$search_term'"
+                                fi
+                                echo "============="
+                            fi
+                        else
+                            echo "Table '$tablename' does not exist."
+                        fi
                         break
                         ;;
                         "Back to Main Menu")
