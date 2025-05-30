@@ -13,8 +13,7 @@ while true; do
 
         case $choice in
             "Create Database")
-                echo "Enter database name:"
-                read dbname
+                read -p "Enter database name:" dbname
                 mkdir "$DB_DIR/$dbname"
                 echo "Database '$dbname' created."
                 break
@@ -25,20 +24,17 @@ while true; do
                 break
                 ;;
             "Connect To Database")
-                echo "Enter database name to connect:"
-                read dbname
+                read -p "Enter database name to connect:" dbname
                 if [ -d "$DB_DIR/$dbname" ]; then
                     echo "Connected to '$dbname'"
                     #--------
                     while true; do
                     echo "===== Tables Menu for '$dbname' ====="
-                    select table_action in "Create Table" "List Tables" "Drop Table" "Back to Main Menu"
+                    select table_action in "Create Table" "List Tables" "Drop Table" "Insert into Table" "Back to Main Menu"
                     do
                     case $table_action in
-                    #----------
                     "Create Table")
-                     echo "Enter Table Name:"
-                     read tablename
+                     read -p "Enter Table Name:" tablename
                     table_file="$DB_DIR/$dbname/$tablename"
                     meta_file="$table_file.meta"
 
@@ -54,20 +50,17 @@ while true; do
 
                     for (( i=1; i<=col_count; i++ ))
                     do
-                    echo "Enter name of column $i:"
-                    read col_name
-
+                    read -p "Enter name of column $i:" col_name
                     echo "Enter datatype of $col_name (string/number):"
                     read col_type
+                    col_type=$(echo "$col_type" | tr '[:upper:]' '[:lower:]')
 
                     # check if datatype is valid or not
-                    while [[ "$col_type" != "string" && "$col_type" != "number" ]]; do
-                     echo "Invalid datatype. Enter string or number:"
-                     read col_type
+                    while [[ "$col_type" != "string" && "$col_type" != "number" ]]; do 
+                     read  -p "Invalid datatype.$\n Enter string or number:" col_type
                     done
-
-                    echo "Is this column the Primary Key? (yes/no):"
-                    read is_pk
+                    read -p "Is this column the Primary Key? (yes/no):" is_pk
+                    is_pk=$(echo "$is_pk" | tr '[:upper:]' '[:lower:]')
 
                    if [[ "$is_pk" == "yes" && "$pk_set" == false ]]; then
                       columns+=("$col_name:$col_type:pk")
@@ -95,8 +88,7 @@ while true; do
                         break
                         ;;
                         "Drop Table")
-                        echo "Enter table name to delete:"
-                        read tablename
+                        read  -p "Enter table name to delete:" tablename
                         rm "$DB_DIR/$dbname/$tablename"
                         echo "Table '$tablename' deleted."
                         break
@@ -104,6 +96,52 @@ while true; do
                         "Back to Main Menu")
                         break 2
                         ;;
+                        # /////////
+                        "Insert into Table")
+                        read -p "Enter Table Name:" tablename
+                        table_file="$DB_DIR/$dbname/$tablename"
+                        meta_file="$table_file.meta"
+
+                        if [ ! -f "$table_file" ]; then
+                            echo "Table does not exist."
+                        else
+                            mapfile -t columns < "$meta_file"
+                            row=()
+                            pk_index=-1
+
+                            for (( i=0; i<${#columns[@]}; i++ )); do
+                                IFS=":" read col_name col_type pk_flag <<< "${columns[$i]}"
+                                echo "Enter value for $col_name (type: $col_type):"
+                                read value
+                                 # check data type
+                                if [ "$col_type" == "number" ]; then
+                                    while ! [[ "$value" =~ ^[0-9]+$ ]]; do
+                                        echo "Invalid. Enter a number:"
+                                        read value
+                                    done
+                                fi
+
+                                # check pk
+                                if [ "$pk_flag" == "pk" ]; then
+                                    pk_index=$i
+                                    pk_value="$value"
+
+                                    # check no repeat for pk
+                                    if cut -d: -f$((pk_index+1)) "$table_file" | grep -qx "$pk_value"; then
+                                        echo "Error: Primary key already exists!"
+                                        break 2
+                                    fi
+                                fi
+
+                                row+=("$value")
+                            done
+                            # insert row into table
+                            (IFS=:; echo "${row[*]}") >> "$table_file"
+                            echo "Row inserted successfully."
+                        fi
+                        break
+                        ;;
+
                         *) echo "Invalid choice. Try again."; break ;;
                     esac
                     done
@@ -115,8 +153,7 @@ while true; do
             break
             ;;
         "Drop Database")
-            echo "Enter database name to delete:"
-            read dbname
+            read -p "Enter database name to delete:" dbname
             rm -r "$DB_DIR/$dbname"
             echo "Database '$dbname' deleted."
             break
