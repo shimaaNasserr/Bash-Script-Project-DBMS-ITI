@@ -30,7 +30,7 @@ while true; do
                     #--------
                     while true; do
                     echo "===== Tables Menu for '$dbname' ====="
-                    select table_action in "Create Table" "List Tables" "Drop Table" "Insert into Table" "Back to Main Menu"
+                    select table_action in "Create Table" "List Tables" "Drop Table" "Insert into Table" "Select From Table" "Back to Main Menu"
                     do
                     case $table_action in
                     "Create Table")
@@ -138,16 +138,42 @@ while true; do
                             # insert row into table
                             (IFS=:; echo "${row[*]}") >> "$table_file"
                             echo "Row inserted successfully."
-                        fi
-                        break
-                        ;;
+                                    fi
+                                    break
+                                    ;;
+                                "Select From Table")
+                                    read -p "Enter Table Name: " tablename
+                                    table_file="$DB_DIR/$dbname/$tablename"
+                                    meta_file="$table_file.meta"
 
-                        *) echo "Invalid choice. Try again."; break ;;
-                    esac
+                                    if [ ! -f "$table_file" ]; then
+                                        echo "Table does not exist."
+                                    else
+                                        mapfile -t columns < "$meta_file"
+                                        header=""
+                                        for col in "${columns[@]}"; do
+                                            IFS=":" read col_name _ <<< "$col"
+                                            header+="$col_name\t| "
+                                        done
+                                        echo -e "$header"
+                                        echo "----------------------------------------"
+                                        while IFS= read -r line; do
+                                            echo -e "$(echo "$line" | tr ':' '\t| ')"
+                                        done < "$table_file"
+                                    fi
+                                    break
+                                    ;;
+                                "Back to Main Menu")
+                                    break 2
+                                    ;;
+                                *)
+                                    echo "Invalid choice. Try again."
+                                    break
+                                    ;;
+                            esac
+                        done
                     done
-                done
-            #----------
-            else
+                else
                 echo "Database not found."
             fi
             break
