@@ -113,16 +113,16 @@ while true; do
                                 echo -e "${RED}Table does not exist.${NC}"
                             else
                                 mapfile -t columns < "$meta_file"
-                                header=""
-                                for col in "${columns[@]}"; do
-                                    IFS=":" read col_name _ <<< "$col"
-                                    header+="$col_name | "
-                                done
-                                echo -e "${BLUE}$header${NC}" | column -t -s '|'
-                                echo -e "${BLUE}----------------------------------------${NC}"
-                                cat "$table_file" | tr ':' '|' | column -t -s '|' | while IFS= read -r line; do
-                                    echo -e "$line"
-                                done 
+                            headSer=""
+                            for col in "${columns[@]}"; do
+                                IFS=":" read col_name _ <<< "$col"
+                                header+="$col_name | "
+                            done
+                            echo -e "${BLUE}$header${NC}" | column -t -s '|'
+                            echo -e "${BLUE}----------------------------------------${NC}"
+                            cat "$table_file" | tr ':' '|' | column -t -s '|' | while IFS= read -r line; do
+                                echo -e "$line"
+                            done
                             fi
                             break
                             ;;
@@ -193,7 +193,7 @@ while true; do
                                 echo -e "${BLUE}----------------------------------------${NC}"
                                 cat "$table_file" | tr ':' '|' | column -t -s '|' | while IFS= read -r line; do
                                     echo -e "$line"
-                                done 
+                                done
 
                                 # Get primary key info
                                 pk_index=-1
@@ -277,13 +277,13 @@ while true; do
                                 header=""
                                 for col in "${columns[@]}"; do
                                     IFS=":" read col_name _ <<< "$col"
-                                    header+="$col_name | "
+                                    header+="$col_name\t| "
                                 done
-                                 echo -e "${BLUE}$header${NC}" | column -t -s '|'
+                                 echo -e "${BLUE}$header${NC}"
                                  echo -e "${BLUE}----------------------------------------${NC}"
-                                cat "$table_file" | tr ':' '|' | column -t -s '|' | while IFS= read -r line; do
-                                    echo -e "$line"
-                                done 
+                                 while IFS= read -r line; do
+                                    echo -e "$(echo "$line" | tr ':' '\t| ')"
+                                done < "$table_file"
 
                                 # Get primary key info
                                 pk_index=-1
