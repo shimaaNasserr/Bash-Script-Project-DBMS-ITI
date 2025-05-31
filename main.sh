@@ -2,47 +2,58 @@
 
 DB_DIR="./databases_test"
 
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[1;34m'
+CYAN='\033[1;36m'
+PURPLE='\033[0;35m'
+NC='\033[0m' 
+
 if [ ! -d "$DB_DIR" ] ; then
  mkdir "$DB_DIR"
  fi
 
 while true; do
-    echo "===== Main Menu ====="
+    PS3="Enter Your Value# "
+    echo -e "${CYAN}===== Main Menu =====${NC}"
         select choice in "Create Database" "List Databases" "Connect To Database" "Drop Database" "Exit"
         do
 
         case $choice in
             "Create Database")
-                read -p "Enter database name:" dbname
+                echo -ne "${CYAN}Enter database name:${NC}"
+                read dbname
                 mkdir "$DB_DIR/$dbname"
-                echo "Database '$dbname' created."
-                break
+                echo -e "${GREEN}Database '$dbname' created.${NC}"
+               break
                 ;;
             "List Databases")
-                echo "Available Databases:"
+                echo -e "${YELLOW}Available Databases:${NC}"
                 ls "$DB_DIR"
                 break
                 ;;
             "Connect To Database")
-                read -p "Enter database name to connect:" dbname
+                read -p "$(echo -e "${CYAN}Enter database name to connect:${NC}") " dbname
                 if [ -d "$DB_DIR/$dbname" ]; then
-                    echo "Connected to '$dbname'"
+                    echo -e "${GREEN}Connected to '$dbname'${NC}"
                     #--------
                     while true; do
-                    echo "===== Tables Menu for '$dbname' ====="
-                    select table_action in "Create Table" "List Tables" "Drop Table" "Insert into Table" "Update Table" "Delete From Table" "Select From Table" "Back to Main Menu"
+                    echo -e "${CYAN}===== Tables Menu for '$dbname' =====${NC}"
+                    PS3="Enter Your Value# "
+                    select table_action in "Create Table" "List Tables" "Drop Table" "Select From Table" "Insert into Table" "Update Table" "Delete From Table" "Back to Main Menu"
                     do
                     case $table_action in
                     "Create Table")
-                     read -p "Enter Table Name:" tablename
+                    read -p "$(echo -e "${CYAN}Enter Table Name:${NC}") " tablename
                     table_file="$DB_DIR/$dbname/$tablename"
                     meta_file="$table_file.meta"
 
                     if [ -f "$table_file" ]; then
-                      echo "Table already exists."
-                    else
-                     echo "How many columns?"
-                      read col_count
+                            echo -e "${RED}Table already exists.${NC}"
+                        else
+                            echo -e "${CYAN}How many columns?${NC}"
+                            read col_count
 
                       columns=() # array store column names
                       datatypes=() # array store column datatypes
@@ -50,16 +61,16 @@ while true; do
 
                     for (( i=1; i<=col_count; i++ ))
                     do
-                    read -p "Enter name of column $i:" col_name
-                    echo "Enter datatype of $col_name (string/number):"
-                    read col_type
-                    col_type=$(echo "$col_type" | tr '[:upper:]' '[:lower:]')
+                        read -p "$(echo -e "${CYAN}Enter name of column $i:${NC}") " col_name
+                        echo -e "${CYAN}Enter datatype of $col_name (string/number):${NC}"
+                        read col_type
+                        col_type=$(echo "$col_type" | tr '[:upper:]' '[:lower:]')
 
                     # check if datatype is valid or not
                     while [[ "$col_type" != "string" && "$col_type" != "number" ]]; do 
-                     read  -p "Invalid datatype.$\n Enter string or number:" col_type
+                     read -p "$(echo -e "${RED}Invalid datatype. Enter string or number:${NC}") " col_type
                     done
-                    read -p "Is this column the Primary Key? (yes/no):" is_pk
+                    read -p "$(echo -e "${CYAN}Is this column the Primary Key? (yes/no):${NC}") " is_pk
                     is_pk=$(echo "$is_pk" | tr '[:upper:]' '[:lower:]')
 
                    if [[ "$is_pk" == "yes" && "$pk_set" == false ]]; then
@@ -78,45 +89,67 @@ while true; do
                         echo "$col" >> "$meta_file"
                     done
 
-                        echo "Table '$tablename' created with metadata."
+                        echo -e "${GREEN}Table '$tablename' created with metadata.${NC}"
                     fi
                     break
                     ;;
                     "List Tables")
-                    echo "Tables in '$dbname':"
+                    echo -e "${YELLOW}Tables in '$dbname':${NC}:"
                     ls "$DB_DIR/$dbname"
                     break
                     ;;
                     "Drop Table")
-                    read  -p "Enter table name to delete:" tablename
+                    read -p "$(echo -e "${CYAN}Enter table name to delete:${NC}") " tablename
                     rm "$DB_DIR/$dbname/$tablename"
-                    echo "Table '$tablename' deleted."
+                    echo -e "${RED}Table '$tablename' deleted.${NC}"
                     break
                     ;;
+                    "Select From Table")
+                            read -p "$(echo -e "${CYAN}Enter Table Name:${NC}") " tablename
+                            table_file="$DB_DIR/$dbname/$tablename"
+                            meta_file="$table_file.meta"
+
+                            if [ ! -f "$table_file" ]; then
+                                echo -e "${RED}Table does not exist.${NC}"
+                            else
+                                mapfile -t columns < "$meta_file"
+                                header=""
+                                for col in "${columns[@]}"; do
+                                    IFS=":" read col_name _ <<< "$col"
+                                    header+="$col_name\t| "
+                                done
+                                echo -e "${BLUE}$header${NC}"
+                                echo -e "${BLUE}----------------------------------------${NC}"
+                                while IFS= read -r line; do
+                                    echo -e "$(echo "$line" | tr ':' '\t| ')"
+                                done < "$table_file"
+                            fi
+                            break
+                            ;;
                     "Back to Main Menu")
                     break 2
                     ;;
-                    # /////////
                     "Insert into Table")
-                    read -p "Enter Table Name:" tablename
+                    read -p "$(echo -e "${CYAN}Enter Table Name:${NC}") " tablename
                     table_file="$DB_DIR/$dbname/$tablename"
                     meta_file="$table_file.meta"
 
                     if [ ! -f "$table_file" ]; then
-                        echo "Table does not exist."
+                        echo -e "${RED}Table does not exist.${NC}"
                     else
+                    echo -e "${YELLOW}Current table content:${NC}"
                         mapfile -t columns < "$meta_file"
                         row=()
                         pk_index=-1
 
                         for (( i=0; i<${#columns[@]}; i++ )); do
                             IFS=":" read col_name col_type pk_flag <<< "${columns[$i]}"
-                            echo "Enter value for $col_name (type: $col_type):"
+                            echo -e "${CYAN}Enter value for $col_name (type: $col_type):${NC}"
                             read value
                                 # check data type
                             if [ "$col_type" == "number" ]; then
                                 while ! [[ "$value" =~ ^[0-9]+$ ]]; do
-                                    echo "Invalid. Enter a number:"
+                                    echo -e "${RED}Invalid. Enter a number:${NC}"
                                     read value
                                 done
                             fi
@@ -128,7 +161,7 @@ while true; do
 
                                 # check no repeat for pk
                                 if cut -d: -f$((pk_index+1)) "$table_file" | grep -qx "$pk_value"; then
-                                    echo "Error: Primary key already exists!"
+                                    echo -e "${RED}Error: Primary key already exists!${NC}"
                                     break 2
                                 fi
                             fi
@@ -137,50 +170,27 @@ while true; do
                             done
                             # insert row into table
                             (IFS=:; echo "${row[*]}") >> "$table_file"
-                            echo "Row inserted successfully."
-                            fi
-                            break
-                            ;;
-                        "Select From Table")
-                            read -p "Enter Table Name: " tablename
-                            table_file="$DB_DIR/$dbname/$tablename"
-                            meta_file="$table_file.meta"
-
-                            if [ ! -f "$table_file" ]; then
-                                echo "Table does not exist."
-                            else
-                                mapfile -t columns < "$meta_file"
-                                header=""
-                                for col in "${columns[@]}"; do
-                                    IFS=":" read col_name _ <<< "$col"
-                                    header+="$col_name\t| "
-                                done
-                                echo -e "$header"
-                                echo "----------------------------------------"
-                                while IFS= read -r line; do
-                                    echo -e "$(echo "$line" | tr ':' '\t| ')"
-                                done < "$table_file"
+                            echo -e "${GREEN}Row inserted successfully.${NC}"
                             fi
                             break
                             ;;
                             "Update Table")
-                            read -p "Enter Table Name: " tablename
+                            read -p "$(echo -e "${CYAN}Enter Table Name:${NC}") " tablename
                             table_file="$DB_DIR/$dbname/$tablename"
                             meta_file="$table_file.meta"
 
                             if [ ! -f "$table_file" ]; then
-                                echo "Table does not exist."
+                                echo -e "${RED}Table does not exist.${NC}"
                             else
                                 # Display table content first
-                                echo "Current table content:"
                                 mapfile -t columns < "$meta_file"
                                 header=""
                                 for col in "${columns[@]}"; do
                                     IFS=":" read col_name _ <<< "$col"
                                     header+="$col_name\t| "
                                 done
-                                echo -e "$header"
-                                echo "----------------------------------------"
+                                echo -e "${BLUE}$header${NC}"
+                                echo -e "${BLUE}----------------------------------------${NC}"
                                 while IFS= read -r line; do
                                     echo -e "$(echo "$line" | tr ':' '\t| ')"
                                 done < "$table_file"
@@ -196,11 +206,11 @@ while true; do
                                 done
 
                                 if [ $pk_index -eq -1 ]; then
-                                    echo "Error: No primary key defined for this table."
+                                    echo -e "${RED}Error: No primary key defined for this table.${NC}"
                                     break
                                 fi
 
-                                read -p "Enter primary key value of the row to update: " pk_value
+                                read -p "$(echo -e "${CYAN}Enter primary key value of the row to update:${NC}") " pk_value
                                 
                                 # Find the row to update
                                 row_found=false
@@ -215,7 +225,7 @@ while true; do
                                 done < "$table_file"
 
                                 if [ "$row_found" == false ]; then
-                                    echo "Error: Row with primary key '$pk_value' not found."
+                                    echo -e "${RED}Error: Row with primary key '$pk_value' not found.${NC}"
                                     break
                                 fi
 
@@ -226,14 +236,14 @@ while true; do
                                     if [ $i -eq $pk_index ]; then
                                         # Skip primary key column (can't update PK)
                                         new_row+=("${row_values[$i]}")
-                                        echo "Primary key column '$col_name' cannot be updated (value remains: ${row_values[$i]})"
+                                        echo -e "${RED}Primary key column '$col_name' cannot be updated (value remains: ${row_values[$i]})${NC}"
                                     else
-                                        read -p "Enter new value for $col_name (type: $col_type, current: ${row_values[$i]}): " value
+                                        read -p "$(echo -e "${CYAN}Enter new value for $col_name (type: $col_type, current: ${row_values[$i]}):${NC}") " value
                                         
                                         # Validate data type
                                         if [ "$col_type" == "number" ]; then
                                             while ! [[ "$value" =~ ^[0-9]+$ ]]; do
-                                                echo "Invalid. Enter a number:"
+                                                echo -e "${RED}Invalid. Enter a number:${NC}"
                                                 read value
                                             done
                                         fi
@@ -249,29 +259,29 @@ while true; do
                                     { print }
                                 ' "$table_file" > "$temp_file" && mv "$temp_file" "$table_file"
                                 
-                                echo "Row updated successfully."
+                                echo -e "${PURPLE}Row updated successfully.${NC}"
                             fi
                             break
                             ;;
                         "Delete From Table")
-                            read -p "Enter Table Name: " tablename
+                            read -p "$(echo -e "${CYAN}Enter Table Name:${NC}") " tablename
                             table_file="$DB_DIR/$dbname/$tablename"
                             meta_file="$table_file.meta"
 
                             if [ ! -f "$table_file" ]; then
-                                echo "Table does not exist."
+                                echo -e "${RED}Table does not exist.${NC}"
                             else
                                 # Display table content first
-                                echo "Current table content:"
+                                echo -e "${YELLOW}Current table content:${NC}"
                                 mapfile -t columns < "$meta_file"
                                 header=""
                                 for col in "${columns[@]}"; do
                                     IFS=":" read col_name _ <<< "$col"
                                     header+="$col_name\t| "
                                 done
-                                echo -e "$header"
-                                echo "----------------------------------------"
-                                while IFS= read -r line; do
+                                 echo -e "${BLUE}$header${NC}"
+                                 echo -e "${BLUE}----------------------------------------${NC}"
+                                 while IFS= read -r line; do
                                     echo -e "$(echo "$line" | tr ':' '\t| ')"
                                 done < "$table_file"
 
@@ -286,11 +296,11 @@ while true; do
                                 done
 
                                 if [ $pk_index -eq -1 ]; then
-                                    echo "Error: No primary key defined for this table."
+                                    echo -e "${RED}Error: No primary key defined for this table.${NC}"
                                     break
                                 fi
 
-                                read -p "Enter primary key value of the row to delete: " pk_value
+                                read -p "$(echo -e "${CYAN}Enter primary key value of the row to delete:${NC}") " pk_value
                                 
                                 # Find and delete the row
                                 temp_file=$(mktemp)
@@ -306,10 +316,10 @@ while true; do
 
                                 if [ "$found" == true ]; then
                                     mv "$temp_file" "$table_file"
-                                    echo "Row deleted successfully."
+                                    echo -e "${RED}Row deleted successfully.${NC}"
                                 else
                                     rm "$temp_file"
-                                    echo "Error: Row with primary key '$pk_value' not found."
+                                    echo -e "${RED}Error: Row with primary key '$pk_value' not found.${NC}"
                                 fi
                             fi
                             break
@@ -318,28 +328,28 @@ while true; do
                             break 2
                             ;;
                         *)
-                            echo "Invalid choice. Try again."
+                            echo -e "${RED}Invalid choice. Try again.${NC}"
                             break
                             ;;
                             esac
                         done
                     done
                 else
-                echo "Database not found."
+                echo -e "${RED}Database not found.${NC}"
             fi
             break
             ;;
         "Drop Database")
-            read -p "Enter database name to delete:" dbname
+            read -p "$(echo -e "${CYAN}Enter database name to delete:${NC}") " dbname
             rm -r "$DB_DIR/$dbname"
-            echo "Database '$dbname' deleted."
+            echo -e "${RED}Database '$dbname' deleted.${NC}"
             break
             ;;
         "Exit")
-            echo "Bye!"
+            echo -e "${YELLOW}ByeBye👋!!${NC}"
             exit
             ;;
-            *) echo "Invalid choice, try again."; break ;;
+            *) echo -e "${RED}Invalid choice, try again.${NC}"; break ;;
         esac
     done
 done
